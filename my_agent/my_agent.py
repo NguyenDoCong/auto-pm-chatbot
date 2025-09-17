@@ -1,5 +1,5 @@
 import os
-from typing import List, TypedDict, Annotated, Optional
+from typing import List, Dict, Any, Optional
 from langgraph.graph import StateGraph, START, END, MessagesState
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import AnyMessage, SystemMessage, HumanMessage
@@ -19,12 +19,20 @@ from langchain.chains.query_constructor.schema import AttributeInfo
 from langchain.retrievers.self_query.base import SelfQueryRetriever
 from langchain_chroma import Chroma
 from dotenv import load_dotenv
+from langchain.chains.query_constructor.base import (
+    StructuredQueryOutputParser,
+    get_query_constructor_prompt,
+)
+from langchain_community.query_constructors.chroma import ChromaTranslator
 
 load_dotenv()
 os.getenv("GOOGLE_API_KEY")
 
 class State(MessagesState):
     summary: str
+    user_query: str
+    related_issues: Optional[List[Dict[str, Any]]]
+    priority_matched: Optional[str]
 
 # Initialize the model
 model = ChatOllama(model="llama3.2")
@@ -44,7 +52,7 @@ def get_all_tasks():
     responses = response.json()["results"]
     results = []
     for response in responses:
-        content = f'This is a work item that has id {response["id"]}, name {response["name"]}, described as {response["description_stripped"]}'
+        content = f'This is a work item that has name {response["name"]}'
         assignees = ' '.join(response["assignees"])
         metadata = {"state": response["state"], "priority": response["priority"], "assignees": assignees}
         document = Document(page_content=content, metadata=metadata)
@@ -186,13 +194,6 @@ def store_search(query: str):
     tasks = get_all_tasks()
 
     vector_store = Chroma.from_documents(tasks, embeddings)
-    # vector_store = FAISS.from_documents(tasks, embeddings)
-
-    # uuids = [str(uuid4()) for _ in range(len(tasks))]
-    # for id in uuids:
-    #     print(id)
-
-    # vector_store.add_documents(documents=tasks)
 
     metadata_field_info = [
         AttributeInfo(
@@ -237,13 +238,95 @@ def store_search(query: str):
     result = retriever.invoke(query)
     return {"result": result}
 
+def priority_query(
+    # retriever,
+    # base_query: str,
+    # query: str,
+    start_priority: str = "urgent"
+) -> Dict[str, Any]:
+    """
+    Use this tool to find tasks with the highest priority.
+    """
+    # Thứ tự priority
+    PRIORITY_ORDER = ["urgent", "high", "medium", "low", "none"]
+    start_idx = PRIORITY_ORDER.index(start_priority)
 
-tools = [store_search]
+    tasks = get_all_tasks()
+
+    vector_store = Chroma.from_documents(tasks, embeddings)
+
+    examples = [
+        (
+            "Find all tasks with priority high",
+            {
+                "query": "get all tasks",
+                "filter": 'eq("priority", "high")',
+            },
+        ),
+        (
+            "Find all tasks with priority low",
+            {
+                "query": "get all tasks",
+                "filter": 'eq("priority", "low")',
+            },
+        ),
+    ]
+
+    metadata_field_info = [
+        AttributeInfo(
+            name="priority",
+            description="The priority of the work item. One of ['none', 'urgent', 'high', 'medium', 'low']",
+            type="string",
+        ),
+        AttributeInfo(
+            name="state",
+            description="The state of the work item",
+            type="string",
+        ),
+        AttributeInfo(
+            name="assignees",
+            description="The list of assignees of the work item",
+            type="string",
+        ),
+    ]
+    document_content_description = "Brief summary of a work item"
+
+    prompt = get_query_constructor_prompt(
+        document_content_description, metadata_field_info, examples=examples
+    )
+    output_parser = StructuredQueryOutputParser.from_components()
+    query_constructor = prompt | model | output_parser
+
+    retriever = SelfQueryRetriever(
+        query_constructor=query_constructor,
+        vectorstore=vector_store,
+        structured_query_translator=ChromaTranslator(),
+    )
+
+    for level in PRIORITY_ORDER[start_idx:]:
+        query = f"filter tasks with priority {level}"
+
+        docs: List[Document] = retriever.invoke(query)
+        if docs:
+            return {
+                "priority_matched": level,
+                "issues": [d.page_content for d in docs],
+                "metadata": [d.metadata for d in docs]
+            }
+    
+    return {
+        "priority_matched": None,
+        "issues": [],
+        "metadata": []
+    }
+
+
+tools = [store_search, priority_query]
 
 llm_with_tools = model.bind_tools(tools)
 
 # System message
-sys_msg = SystemMessage(content="You are a helpful assistant tasked with getting tasks and changing task status.")
+sys_msg = SystemMessage(content="You are a helpful assistant tasked with getting tasks information for a user. You have access to some tools that you can use to get the information.")
 
 # node definitions
 def assistant(state: State):
