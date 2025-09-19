@@ -25,10 +25,14 @@ from langchain.chains.query_constructor.base import (
     get_query_constructor_prompt,
 )
 from langchain_community.query_constructors.chroma import ChromaTranslator
+from typing import Any, Dict
 
 load_dotenv()
 os.getenv("GOOGLE_API_KEY")
 
+model = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
+llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
+embeddings = OllamaEmbeddings(model="all-minilm")
 
 class Item(BaseModel):
     """Information about an Item."""
@@ -65,24 +69,52 @@ prompt_template = ChatPromptTemplate.from_messages(
     ]
 )
 
-
-def get_all_tasks():
-    """Get all tasks."""
-    url = "https://api.plane.so/api/v1/workspaces/congnguyendo/projects/e0361220-8104-4600-a463-ee5c2572eb2b/issues/"
-
+def get_data_from_api(url: str, table_name: str = None):
     headers = {"x-api-key": "plane_api_b343a356f3d1480ab568697a162150dd"}
 
     response = requests.get(url, headers=headers)
-    responses = response.json()["results"]
+    if table_name:
+        return response.json()
+        
+    return response.json()["results"]
+
+def unite_tables():
+    assignees = get_data_from_api('https://api.plane.so/api/v1/workspaces/congnguyendo/members/','members')
+    issues = get_data_from_api('https://api.plane.so/api/v1/workspaces/congnguyendo/projects/e0361220-8104-4600-a463-ee5c2572eb2b/issues')
+    states = get_data_from_api('https://api.plane.so/api/v1/workspaces/congnguyendo/projects/e0361220-8104-4600-a463-ee5c2572eb2b/states')
+
+    # pprint.pprint(assignees)
+    # print("Issues:", issues)
+
+    # Tạo index theo id (id là string)
+    assignee_index = {a["id"]: a["display_name"] for a in assignees}
+    state_index = {s["id"]: s["group"] for s in states}
+
+    # pprint.pprint(assignee_index)
+
+    result = []
+    for issue in issues:
+        enriched = {
+            "id": issue["id"],
+            "name": issue["name"],
+            "priority": issue["priority"],
+            "assignees": [assignee_index[aid] for aid in issue["assignees"]],
+            "state": state_index.get(issue["state"])            
+        }
+        result.append(enriched)
+
+    return result
+
+def get_all_tasks():
+    """Get all tasks."""
+    responses = unite_tables()
+
     results = []
     for response in responses:
         content = f"This is a work item that has name {response['name']}"
         assignees = " ".join(response["assignees"])
-        metadata = {
-            "state": response["state"],
-            "priority": response["priority"].lower(),  # Chuyển về chữ thường
-            "assignees": assignees,
-        }
+        metadata = {"priority": response["priority"], "assignees": assignees}
+
         document = Document(page_content=content, metadata=metadata)
         # content = (
         #     f'Name: {response["name"]} | '
@@ -98,58 +130,15 @@ def get_all_tasks():
     return results
 
 
-def doc_to_text(docs: List[Document]) -> str:
-    """Convert list of Document to text."""
-    texts = [doc.model_dump_json() for doc in docs]
-    # return "\n".join(texts)
-    return texts
+# Danh sách priority theo thứ tự
+PRIORITY_ORDER = ["urgent", "high", "medium", "low", "none"]
 
 
-def add_to_vector_store():
-    """Add all tasks to vector store."""
-    embeddings_model = OllamaEmbeddings(model="llama3.2")
-    tasks = get_all_tasks()["result"]
-    texts = doc_to_text(tasks)
-    # vector_store = FAISS(
-    #     embedding_function=embeddings_model,
-    #     docstore=InMemoryDocstore(),
-    #     index_to_docstore_id={},
-    # )
-    vector_store = FAISS.from_documents(tasks, embeddings_model)
-
-    uuids = [str(uuid4()) for _ in range(len(texts))]
-
-    vector_store.add_documents(documents=tasks, ids=uuids)
-
-
-def generate_filter_from_query(query: str) -> dict:
-    """Generate filter key-value pairs from a natural language query."""
-    llm = ChatOllama(model="llama3.2")
-    structured_llm = llm.with_structured_output(schema=Item)
-    # template = f"""
-    # Given the following query: "{query}", extract key-value pairs for filtering tasks.
-    # The keys should match the metadata fields: ['state'].
-    # Respond in JSON format only.
-    # """
-    # prompt = ChatPromptTemplate.from_template(template)
-    prompt = prompt_template.invoke({"text": query})
-    response = structured_llm.invoke(prompt)
-    # chain = prompt | llm
-
-    # response = chain.invoke(query)
-    return response.model_dump()
-
-
-if __name__ == "__main__":
-    embeddings = OllamaEmbeddings(model="all-minilm")
-    tasks = get_all_tasks()
-
-    vector_store = Chroma.from_documents(tasks, embeddings)
-
-    metadata_field_info = [
+def build_metadata_field_info() -> List[AttributeInfo]:
+    return [
         AttributeInfo(
             name="priority",
-            description="The priority of the work item. One of ['none', 'urgent', 'high', 'medium', 'low']",
+            description="The priority of the work item. One of ['urgent', 'high', 'medium', 'low', 'none'], from highest to lowest",
             type="string",
         ),
         AttributeInfo(
@@ -162,104 +151,58 @@ if __name__ == "__main__":
             description="The list of assignees of the work item",
             type="string",
         ),
+        AttributeInfo(
+            name="created_by",
+            description="The creator of the work item",
+            type="string",
+        ),
     ]
+
+
+def build_vector_store() -> Chroma:
+    tasks = get_all_tasks()
+    return Chroma.from_documents(tasks, embeddings)
+
+def build_self_query_retriever(
+    llm, vector_store: Chroma, examples: List = None
+) -> SelfQueryRetriever:
+    metadata_field_info = build_metadata_field_info()
     document_content_description = "Brief summary of a work item"
 
-    llm = ChatOllama(model="llama3.2")
-    llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
-
-    retriever = SelfQueryRetriever.from_llm(
-        llm,
-        vector_store,
-        document_content_description,
-        metadata_field_info,
-        enable_limit=False,
-    )
-
-    # retriever = vector_store.as_retriever(
-    #     search_type="similarity",
-    #     search_kwargs={"k": 10},
-    # )
-    # pprint.pprint(vector_store.get())
-
-    # result = retriever.invoke("show all data")
-    # pprint.pprint(result)
-
-    # prompt = get_query_constructor_prompt(
-    #     document_content_description,
-    #     metadata_field_info,
-    # )
-    # output_parser = StructuredQueryOutputParser.from_components()
-    # query_constructor = prompt | llm | output_parser
-
-    # retriever = SelfQueryRetriever(
-    #     query_constructor=query_constructor,
-    #     vectorstore=vector_store,
-    #     structured_query_translator=ChromaTranslator(),
-    # )
-
-    # print(prompt.format(query="What is the most urgent task?"))
-
-    # print(query_constructor.invoke(
-    #     {
-    #         "query": "list all tasks"
-    #     }
-    # ))
-
-    # pprint.pprint(vector_store.get())
-
-    # Thứ tự priority
-    PRIORITY_ORDER = ["urgent", "high", "medium", "low", "none"]
-    start_idx = PRIORITY_ORDER.index("urgent")
-
-    result = {"priority_matched": None, "issues": [], "metadata": []}
-
-    all_docs = []  # Đổi tên để tránh ghi đè
-
-    for level in PRIORITY_ORDER[start_idx:]:
-        query = f"filter tasks with priority {level}"
-        print(query)
-        examples = [
-            (
-                "Find all tasks with priority high",
-                {
-                    "query": "get all tasks",
-                    "filter": 'eq("priority", "high")',
-                },
-            ),
-            (
-                "Find all tasks with priority low",
-                {
-                    "query": "get all tasks",
-                    "filter": 'eq("priority", "low")',
-                },
-            ),
-        ]
+    if examples:
+        # Trường hợp priority_query: có examples
         prompt = get_query_constructor_prompt(
             document_content_description, metadata_field_info, examples=examples
         )
         output_parser = StructuredQueryOutputParser.from_components()
         query_constructor = prompt | llm | output_parser
-        # print(prompt.format(query=query))
-        print(query_constructor.invoke(
-            {
-                "query": query
-            }
-        ))
-        retriever = SelfQueryRetriever(
+
+        return SelfQueryRetriever(
             query_constructor=query_constructor,
             vectorstore=vector_store,
             structured_query_translator=ChromaTranslator(),
         )
+    else:
+        # Trường hợp store_search: dùng from_llm
+        return SelfQueryRetriever.from_llm(
+            llm,
+            vector_store,
+            document_content_description,
+            metadata_field_info,
+            search_kwargs={"k": 10},
+        )
 
-        level_docs = retriever.invoke(query)
-        all_docs.extend(level_docs)  
-        # Thu thập tất cả docs        
-        # if docs:
-        #     result = {
-        #         "priority_matched": level,
-        #         "issues": [d.page_content for d in docs],
-        #         "metadata": [d.metadata for d in docs]
-        #     }
 
-    pprint.pprint(all_docs)
+def store_search(query: str) -> Dict[str, Any]:
+    """
+    Search in vector store using query + metadata filter.
+    """
+    vector_store = build_vector_store()
+    retriever = build_self_query_retriever(model, vector_store)
+
+    result = retriever.invoke(query)
+    return {"result": result}
+
+if __name__ == "__main__":
+    result = store_search("List all started tasks")
+    pprint.pprint(result['result'])

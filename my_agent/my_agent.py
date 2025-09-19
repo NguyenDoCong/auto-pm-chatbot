@@ -11,6 +11,7 @@ from langchain_ollama import ChatOllama
 import requests
 from langchain_core.documents import Document
 from langchain_ollama import OllamaEmbeddings
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 import faiss
 from langchain_community.docstore.in_memory import InMemoryDocstore
 from langchain_community.vectorstores import FAISS
@@ -24,9 +25,11 @@ from langchain.chains.query_constructor.base import (
     get_query_constructor_prompt,
 )
 from langchain_community.query_constructors.chroma import ChromaTranslator
+import pprint
 
 load_dotenv()
 os.getenv("GOOGLE_API_KEY")
+
 
 class State(MessagesState):
     summary: str
@@ -34,89 +37,83 @@ class State(MessagesState):
     related_issues: Optional[List[Dict[str, Any]]]
     priority_matched: Optional[str]
 
+
 # Initialize the model
 model = ChatOllama(model="llama3.2")
 model = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
+llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
+
 embeddings = OllamaEmbeddings(model="all-minilm")
 
-# assign model and tools to the agent
+embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001")
 
-#tool definition
-def get_all_tasks():
-    """Get all tasks."""
-    url = "https://api.plane.so/api/v1/workspaces/congnguyendo/projects/e0361220-8104-4600-a463-ee5c2572eb2b/issues/"
 
+def get_data_from_api(url: str, table_name: str = None):
     headers = {"x-api-key": "plane_api_b343a356f3d1480ab568697a162150dd"}
 
     response = requests.get(url, headers=headers)
-    responses = response.json()["results"]
+    if table_name:
+        return response.json()
+
+    return response.json()["results"]
+
+
+def unite_tables():
+    assignees = get_data_from_api(
+        "https://api.plane.so/api/v1/workspaces/congnguyendo/members/", "members"
+    )
+    issues = get_data_from_api(
+        "https://api.plane.so/api/v1/workspaces/congnguyendo/projects/e0361220-8104-4600-a463-ee5c2572eb2b/issues"
+    )
+    states = get_data_from_api(
+        "https://api.plane.so/api/v1/workspaces/congnguyendo/projects/e0361220-8104-4600-a463-ee5c2572eb2b/states/"
+    )
+
+    # pprint.pprint(assignees)
+    # print("Issues:", issues)
+
+    # Tạo index theo id (id là string)
+    assignee_index = {a["id"]: a["display_name"] for a in assignees}
+    # pprint.pprint(assignee_index)
+    state_index = {s["id"]: s["name"] for s in states}
+
+    result = []
+    for issue in issues:
+        comments = get_data_from_api(f'https://api.plane.so/api/v1/workspaces/congnguyendo/projects/e0361220-8104-4600-a463-ee5c2572eb2b/issues/{str(issue["id"])}/comments/')
+        if not comments:
+            comment_texts = []
+        else:
+            comment_texts = [c["comment_stripped"] for c in comments]
+        enriched = {
+            "id": issue["id"],
+            "name": issue["name"],
+            "priority": issue["priority"],
+            "assignees": [assignee_index[aid] for aid in issue["assignees"]],
+            "state": state_index.get(issue["state"]),
+            "comments": comment_texts,
+            }
+        result.append(enriched)
+
+    return result
+
+
+# tool definition
+def get_all_tasks():
+    """Get all tasks."""
+
+    responses = unite_tables()
     results = []
     for response in responses:
-        content = f'This is a work item that has name {response["name"]}'
-        assignees = ' '.join(response["assignees"])
-        metadata = {"state": response["state"], "priority": response["priority"], "assignees": assignees}
+        assignees = " and ".join(response["assignees"])
+        comments  = " and ".join(response["comments"])
+        content = f"This is a work item that has name: {response['name']}, priority: {response['priority']}, assignees: {assignees}, state: {response['state']}, 'comments': {comments}"
+        metadata = {}
         document = Document(page_content=content, metadata=metadata)
         results.append(document)
 
+    # pprint.pprint(results)
     return results
 
-def doc_to_text(docs: List[Document]) -> str:
-    """Convert list of Document to text."""
-    texts = [doc.model_dump_json() for doc in docs]
-    # return "\n".join(texts)
-    return texts
-
-def embed_all_tasks():
-    """Embed all tasks."""
-    tasks = get_all_tasks()["result"]
-    texts = doc_to_text(tasks)
-    embeddings = embeddings_model.embed_documents(texts)
-    return embeddings
-
-def add_to_vector_store():
-    """Add all tasks to vector store."""
-    tasks = get_all_tasks()
-    texts = doc_to_text(tasks)
-    vector_store = Chroma.from_documents(tasks, embeddings)
-
-
-    
-
-def get_task_ids_by_assignee_id(assignee_id: str):
-    """Get task ids by assignee id."""
-    url = "https://api.plane.so/api/v1/workspaces/congnguyendo/projects/e0361220-8104-4600-a463-ee5c2572eb2b/issues/?fields=id,name,assignees,description_stripped"
-    headers = {"x-api-key": "plane_api_b343a356f3d1480ab568697a162150dd"}
-    response = requests.get(url, headers=headers)
-    plane_results = response.json()["results"]
-    results = []
-    assignee_id='507817ec-d907-461e-a86a-be44fde519d3'
-    for result in plane_results:
-        if assignee_id in result["assignees"]:
-            results.append({"name":result["name"],"description":result["description_stripped"]})
-
-    return {"result":results}
-
-def get_task_ids_by_assignee_id_and_priority(assignee_id: str):
-    """Get task ids by assignee id with highest priority."""
-    url = "https://api.plane.so/api/v1/workspaces/congnguyendo/projects/e0361220-8104-4600-a463-ee5c2572eb2b/issues/?fields=id,name,assignees,description_stripped"
-    headers = {"x-api-key": "plane_api_b343a356f3d1480ab568697a162150dd"}
-    response = requests.get(url, headers=headers)
-    plane_results = response.json()["results"]
-    results = []
-    assignee_id='507817ec-d907-461e-a86a-be44fde519d3'
-    for result in plane_results:
-        if assignee_id in result["assignees"]:
-            results.append({"name":result["name"],"description":result["description_stripped"]})
-
-    return {"result":results}    
-
-def get_task(name: str):
-    """Get task by name."""
-    tasks = get_all_tasks()["result"]
-    for t in tasks:
-        if name.lower() in t["name"].lower():
-            return {"result": t}
-    return {"error": "Task not found"}
 
 def add_report(name, report):
     """Add report by task name."""
@@ -131,16 +128,17 @@ def add_report(name, report):
 
     url = f"https://api.plane.so/api/v1/workspaces/congnguyendo/projects/e0361220-8104-4600-a463-ee5c2572eb2b/issues/{id}/comments/"
 
-    payload = { "comment_html": report }
+    payload = {"comment_html": report}
     headers = {
         "x-api-key": "plane_api_29c429f9822146aba6782cba5d3c1a4a",
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
     }
 
     response = requests.post(url, json=payload, headers=headers)
 
-    # print(response.json())        
+    # print(response.json())
     return {"result": response.json()}
+
 
 def update_status(id):
     """Update status by task id."""
@@ -149,6 +147,7 @@ def update_status(id):
             t["status"] = "complete"
             return {"result": t}
     return {"error": "Task not found"}
+
 
 def summarize_reports(id: Optional[int] = None):
     """Summarize reports by task id."""
@@ -159,19 +158,20 @@ def summarize_reports(id: Optional[int] = None):
 
     if not task:
         return {"error": "Task not found"}
-    
+
     daily_report = None
     daily_report = task["daily_report"]
     if not daily_report:
         return {"error": "No reports to summarize"}
-            
-    summary_message = f"Create a short summary of all reports of the task {task["name"]} by using the following reports: {daily_report}"
+
+    summary_message = f"Create a short summary of all reports of the task {task['name']} by using the following reports: {daily_report}"
 
     response = model.invoke(summary_message)
 
     task["daily_report_summary"] = response.content
 
     return {"summary": response.content}
+
 
 def get_all_comments():
     """Get all comments."""
@@ -183,19 +183,15 @@ def get_all_comments():
     for response in responses:
         pass
 
+    return {"result": result}
 
-    return {"result":result}
 
-def store_search(query: str):
-    """
-    Receive a query, search in store and return a response.
-    The store contains tasks with metadata: state, priority, assignees.
-    """
-    tasks = get_all_tasks()
+# Danh sách priority theo thứ tự
+PRIORITY_ORDER = ["urgent", "high", "medium", "low", "none"]
 
-    vector_store = Chroma.from_documents(tasks, embeddings)
 
-    metadata_field_info = [
+def build_metadata_field_info() -> List[AttributeInfo]:
+    return [
         AttributeInfo(
             name="priority",
             description="The priority of the work item. One of ['urgent', 'high', 'medium', 'low', 'none'], from highest to lowest",
@@ -209,128 +205,116 @@ def store_search(query: str):
         AttributeInfo(
             name="assignees",
             description="The list of assignees of the work item",
-            type="string",
+            type="list[string]",
         ),
         AttributeInfo(
             name="created_by",
             description="The creator of the work item",
             type="string",
-        )
+        ),
     ]
-    document_content_description = "Brief summary of a work item"
 
-    llm = ChatOllama(model="llama3.2")
-    llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
 
-    retriever = SelfQueryRetriever.from_llm(
-        llm,
-        vector_store,
-        document_content_description,
-        metadata_field_info,
-    )
+def build_vector_store() -> Chroma:
+    tasks = get_all_tasks()
+    return Chroma.from_documents(tasks, embeddings)
 
+
+def build_self_query_retriever(
+    llm, vector_store: Chroma, examples: List = None
+) -> SelfQueryRetriever:
+    # metadata_field_info = build_metadata_field_info()
+    metadata_field_info = []
+
+    document_content_description = "Brief summary of a work item, containing the name, priority, comments and assignees. Priority from highest to lowest is: urgent, high, medium, low, none."
+
+    examples = [
+        # ("Find all tasks with priority high",
+        #  {"query": "get all tasks", "filter": 'eq("priority", "high")'}),
+        # ("Find all tasks assigned to xyz",
+        #  {"query": "get all tasks", "filter": 'eq("assignees", "xyz")'}),
+    ]
+
+    if examples:
+        # Trường hợp priority_query: có examples
+        prompt = get_query_constructor_prompt(
+            document_content_description, metadata_field_info, examples=examples
+        )
+        # print(prompt.format(query="dummy question"))
+        output_parser = StructuredQueryOutputParser.from_components()
+        query_constructor = prompt | llm | output_parser
+
+        return SelfQueryRetriever(
+            query_constructor=query_constructor,
+            vectorstore=vector_store,
+            structured_query_translator=ChromaTranslator(),
+            search_type="similarity_score_threshold",
+            search_kwargs={"score_threshold": 0.5},
+        )
+    else:
+        # Trường hợp store_search: dùng from_llm
+        return SelfQueryRetriever.from_llm(
+            llm,
+            vector_store,
+            document_content_description,
+            metadata_field_info,
+            search_type="similarity_score_threshold",
+            search_kwargs={"score_threshold": 0.5},
+        )
+
+
+def store_search(query: str) -> Dict[str, Any]:
+    """
+    Search in vector store using query.
+    """
+    vector_store = build_vector_store()
+    retriever = build_self_query_retriever(llm, vector_store)
     # retriever = vector_store.as_retriever(
-    #     search_type="similarity",
-    #     search_kwargs={"k": 1},
-    #     # filter={"priority": "urgent"},
+    #     search_type="similarity_score_threshold", search_kwargs={"score_threshold": 0.3}
     # )
 
     result = retriever.invoke(query)
     return {"result": result}
 
-def priority_query(
-    # retriever,
-    # base_query: str,
-    # query: str,
-    start_priority: str = "urgent"
-) -> Dict[str, Any]:
+
+def priority_query(start_priority: str = "urgent") -> Dict[str, Any]:
     """
-    Use this tool to find tasks with the highest priority.
+    Find tasks with the highest priority available.
     """
-    # Thứ tự priority
-    PRIORITY_ORDER = ["urgent", "high", "medium", "low", "none"]
+    vector_store = build_vector_store()
+
+    retriever = build_self_query_retriever(llm, vector_store)
+
     start_idx = PRIORITY_ORDER.index(start_priority)
-
-    tasks = get_all_tasks()
-
-    vector_store = Chroma.from_documents(tasks, embeddings)
-
-    examples = [
-        (
-            "Find all tasks with priority high",
-            {
-                "query": "get all tasks",
-                "filter": 'eq("priority", "high")',
-            },
-        ),
-        (
-            "Find all tasks with priority low",
-            {
-                "query": "get all tasks",
-                "filter": 'eq("priority", "low")',
-            },
-        ),
-    ]
-
-    metadata_field_info = [
-        AttributeInfo(
-            name="priority",
-            description="The priority of the work item. One of ['none', 'urgent', 'high', 'medium', 'low']",
-            type="string",
-        ),
-        AttributeInfo(
-            name="state",
-            description="The state of the work item",
-            type="string",
-        ),
-        AttributeInfo(
-            name="assignees",
-            description="The list of assignees of the work item",
-            type="string",
-        ),
-    ]
-    document_content_description = "Brief summary of a work item"
-
-    prompt = get_query_constructor_prompt(
-        document_content_description, metadata_field_info, examples=examples
-    )
-    output_parser = StructuredQueryOutputParser.from_components()
-    query_constructor = prompt | model | output_parser
-
-    retriever = SelfQueryRetriever(
-        query_constructor=query_constructor,
-        vectorstore=vector_store,
-        structured_query_translator=ChromaTranslator(),
-    )
-
     for level in PRIORITY_ORDER[start_idx:]:
         query = f"filter tasks with priority {level}"
-
         docs: List[Document] = retriever.invoke(query)
         if docs:
             return {
                 "priority_matched": level,
                 "issues": [d.page_content for d in docs],
-                "metadata": [d.metadata for d in docs]
+                "metadata": [d.metadata for d in docs],
             }
-    
-    return {
-        "priority_matched": None,
-        "issues": [],
-        "metadata": []
-    }
+
+    return {"priority_matched": None, "issues": [], "metadata": []}
 
 
-tools = [store_search, priority_query]
+tools = [store_search]
 
 llm_with_tools = model.bind_tools(tools)
 
 # System message
-sys_msg = SystemMessage(content="You are a helpful assistant tasked with getting tasks information for a user. You have access to some tools that you can use to get the information.")
+sys_msg = SystemMessage(
+    content="You are a helpful assistant tasked with getting tasks information for a user. Use the tool provided to you to query all task related information, including name, priority, state, comments and assignees. "
+    "If the user query is about finding tasks with the highest priority, create a query consisted of the word 'priority' and the priority level. Priority from highest to lowest is: urgent, high, medium, low, none. "
+    "If the tool response is none, try to query a lower priority level. If you don't find the response that has the answe you're looking for, try to remember the task with highest priority at each response. Select the task that has the highest priority based on that memory and give the answer. "
+)
+
 
 # node definitions
 def assistant(state: State):
-   return {"messages": [llm_with_tools.invoke([sys_msg] + state["messages"])]}
+    return {"messages": [llm_with_tools.invoke([sys_msg] + state["messages"])]}
+
 
 # build the graph
 task_graph = StateGraph(State)
@@ -355,3 +339,10 @@ compiled_graph = task_graph.compile()
 
 # compiled_graph.invoke({})
 
+if __name__ == "__main__":
+    # result = store_search("list all tasks assigned to tuoithodudoi.phungquan")
+    # result = store_search("tasks with highest priority")
+    result = store_search("show tasks with comments containing 'tôi đã hoàn thành'")
+
+    pprint.pprint(result["result"])
+    # get_all_tasks()
