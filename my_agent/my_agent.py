@@ -7,10 +7,10 @@ from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode, tools_condition
 from langgraph.checkpoint.memory import InMemorySaver
 # from langchain_ollama.llms import OllamaLLM
-# from langchain_ollama import ChatOllama
+from langchain_ollama import ChatOllama
 import requests
 from langchain_core.documents import Document
-# from langchain_ollama import OllamaEmbeddings
+from langchain_ollama import OllamaEmbeddings
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 # import faiss
 from langchain_community.docstore.in_memory import InMemoryDocstore
@@ -29,19 +29,25 @@ import pprint
 from typing_extensions import Annotated
 from langgraph.types import CachePolicy
 
-# from IPython.display import Image, display
+from IPython.display import Image, display
+from langchain.retrievers import ParentDocumentRetriever
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain.storage import InMemoryStore
 
 load_dotenv()
 os.getenv("GOOGLE_API_KEY")
-
+os.getenv("LANGSMITH_API_KEY")
+X_API_KEY = os.getenv("X_API_KEY")
 # Initialize the model
-# model = ChatOllama(model="llama3.2")
+model = ChatOllama(model="llama3.1")
+llm = ChatOllama(model="llama3.1")
+
 model = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
 llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
 
-# embeddings = OllamaEmbeddings(model="all-minilm")
+embeddings = OllamaEmbeddings(model="all-minilm")
 
-embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001")
+# embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001")
 
 
 def get_data_from_api(url: str, table_name: str = None):
@@ -106,10 +112,10 @@ def get_all_tasks():
     for response in responses:
         assignees = " and ".join(response["assignees"])
         comments  = " and ".join(response["comments"])
-        content = f"This is a work item that has name: {response['name']}, priority: {response['priority']}, assignees: {assignees}, \
-            state: {response['state']}, 'comments': {comments}, 'start date': {response['start_date']}, 'target_date': {response['target_date']}, \
+        content = f"This is a work item that has name: {response['name']}, assignees: {assignees}, \
+            'comments': {comments}, 'start date': {response['start_date']}, 'target_date': {response['target_date']}, \
             'completed at': {response['completed_at']} , 'description': {response['description_stripped']}"
-        metadata = {}
+        metadata = {"priority": str(response['priority']), "state": str(response['state'])}
         document = Document(page_content=content, metadata=metadata)
         results.append(document)
 
@@ -201,19 +207,19 @@ def build_metadata_field_info() -> List[AttributeInfo]:
         ),
         AttributeInfo(
             name="state",
-            description="The state of the work item",
+            description="The state of the work item. It can take one of the following values:'Todo', 'In Progress', 'Done', 'Backlog', 'Cancelled'",
             type="string",
         ),
-        AttributeInfo(
-            name="assignees",
-            description="The list of assignees of the work item",
-            type="list[string]",
-        ),
-        AttributeInfo(
-            name="created_by",
-            description="The creator of the work item",
-            type="string",
-        ),
+        # AttributeInfo(
+        #     name="assignees",
+        #     description="The list of assignees of the work item",
+        #     type="list[string]",
+        # ),
+        # AttributeInfo(
+        #     name="created_by",
+        #     description="The creator of the work item",
+        #     type="string",
+        # ),
     ]
 
 
@@ -225,17 +231,17 @@ def build_vector_store() -> Chroma:
 def build_self_query_retriever(
     llm, vector_store: Chroma, examples: List = None
 ) -> SelfQueryRetriever:
-    # metadata_field_info = build_metadata_field_info()
-    metadata_field_info = []
+    metadata_field_info = build_metadata_field_info()
+    # metadata_field_info = []
 
-    document_content_description = "Brief summary of a work item."
+    document_content_description = "Information of a work item."
 
-    examples = [
-        # ("Find all tasks with priority high",
-        #  {"query": "get all tasks", "filter": 'eq("priority", "high")'}),
-        # ("Find all tasks assigned to xyz",
-        #  {"query": "get all tasks", "filter": 'eq("assignees", "xyz")'}),
-    ]
+    # examples = [
+    #     ("Find all tasks with priority high",
+    #      {"query": "get all tasks", "filter": 'eq("priority", "high")'}),
+    #     ("Find all tasks with priority low and state is Todo",
+    #      {"query": "get all tasks", "filter": 'and(eq("priority", "low"), eq("state", "Todo")'}),
+    # ]
 
     if examples:
         # Trường hợp priority_query: có examples
@@ -245,13 +251,15 @@ def build_self_query_retriever(
         # print(prompt.format(query="dummy question"))
         output_parser = StructuredQueryOutputParser.from_components()
         query_constructor = prompt | llm | output_parser
+        
+        print(query_constructor.invoke({"query": "highest priority tasks with state Todo"}))
 
         return SelfQueryRetriever(
             query_constructor=query_constructor,
             vectorstore=vector_store,
             structured_query_translator=ChromaTranslator(),
-            search_type="similarity_score_threshold",
-            search_kwargs={"score_threshold": 0.5},
+            # search_type="similarity_score_threshold",
+            # search_kwargs={"score_threshold": 0.5},
         )
     else:
         # Trường hợp store_search: dùng from_llm
@@ -260,17 +268,32 @@ def build_self_query_retriever(
             vector_store,
             document_content_description,
             metadata_field_info,
-            search_type="similarity_score_threshold",
-            search_kwargs={"score_threshold": 0.5},
+            # search_type="similarity_score_threshold",
+            # search_kwargs={"score_threshold": 0.5},
         )
 
-vector_store = build_vector_store()
+# vector_store = build_vector_store()
 
-def store_search(query: str) -> Dict[str, Any]:
+def store_search(query: str, filter: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
     """
     Search in vector store using query.
     """
-    retriever = build_self_query_retriever(llm, vector_store)
+    tasks= get_all_tasks()
+    # This text splitter is used to create the child documents
+    child_splitter = RecursiveCharacterTextSplitter(chunk_size=40, chunk_overlap=0)
+    # The vectorstore to use to index the child chunks
+    vectorstore = Chroma(
+        collection_name="full_documents", embedding_function=embeddings
+    )
+    # The storage layer for the parent documents
+    store = InMemoryStore()
+    retriever = ParentDocumentRetriever(
+        vectorstore=vectorstore,
+        docstore=store,
+        child_splitter=child_splitter,
+    )
+    retriever.add_documents(tasks, ids=None)
+    # retriever = build_self_query_retriever(llm, vector_store)
     # retriever = vector_store.as_retriever(
     #     search_type="similarity_score_threshold", search_kwargs={"score_threshold": 0.3}
     # )
@@ -309,8 +332,8 @@ llm_with_tools = model.bind_tools(tools)
 sys_msg = SystemMessage(
     content="You are a helpful assistant tasked with getting tasks information for a user. Use the tool provided to you to query all task related information, \
         including name, priority, state, comments, start date, target date (due date), completed at, description and assignees. "
-    "If the user query is about finding tasks with the highest priority, create a query consisted of the word 'priority' and the priority level. \
-        Priority from highest to lowest is: urgent, high, medium, low, none. "
+    "If the user query is about finding tasks with the highest priority, search for tasks with priority from highest to lowest.\
+        Priority level from highest to lowest is: urgent, high, medium, low, none. "
     "If the tool response is none, try to query a lower priority level. If you don't find the response that has the answer you're looking for, \
         try to remember the task with highest priority at each response. Select the task that has the highest priority based on that memory and give the answer. "
     "If the user query is related to starting time of a task, look for the time mentioned in the start date key of the task. "   
@@ -344,7 +367,7 @@ def assistant(state: State):
 task_graph = StateGraph(State)
 
 task_graph.add_node("assistant", assistant)
-task_graph.add_node("tools", ToolNode(tools), cache_policy=CachePolicy())
+task_graph.add_node("tools", ToolNode(tools))
 
 # task_graph.add_node("get_task",get_task)
 
@@ -359,7 +382,7 @@ task_graph.add_edge("tools", "assistant")
 
 memory = InMemorySaver()
 
-compiled_graph = task_graph.compile(checkpointer=memory)
+compiled_graph = task_graph.compile()
 
 # try:
 #     display(Image(compiled_graph.get_graph().draw_mermaid_png()))
@@ -367,14 +390,21 @@ compiled_graph = task_graph.compile(checkpointer=memory)
 #     # This requires some extra dependencies and is optional
 #     pass
 # compiled_graph.invoke({})
+# print(compiled_graph.get_graph().draw_mermaid())
 
 def stream_graph_updates(user_input: str):
-    config = {"configurable": {"thread_id": "1"}}
-    for event in compiled_graph.stream({"messages": [{"role": "user", "content": user_input}]}, config,
-        stream_mode="values",
+    # config = {"configurable": {"thread_id": "1"}}
+    # for event in compiled_graph.stream({"messages": [{"role": "user", "content": user_input}]}, config,
+    #     stream_mode="values",
+    # ):
+    #     for value in event.values():
+    #         print("Assistant:", value[-1].content)
+    for chunk in compiled_graph.stream(
+        {"messages": [{"role": "user", "content": user_input}]},
+        stream_mode="updates"
     ):
-        for value in event.values():
-            print("Assistant:", value[-1].content)
+        print(chunk)
+        print("\n")
 
 # while True:
 #     try:
@@ -391,11 +421,17 @@ def stream_graph_updates(user_input: str):
 #         break
 
 # if __name__ == "__main__":
-#     # result = store_search("list all tasks assigned to tuoithodudoi.phungquan")
-#     # result = store_search("tasks with highest priority")
+# # #     # result = store_search("list all tasks assigned to tuoithodudoi.phungquan")
+# # #     # result = store_search("tasks with highest priority")
 
     
-#     result = store_search("NOT target_date:None AND target_date:*")
+# # #     result = store_search("NOT target_date:None AND target_date:*")
 
-#     pprint.pprint(result["result"])
-#     # get_all_tasks()
+# # #     pprint.pprint(result["result"])
+# # #     # get_all_tasks()
+
+#     # pprint.pprint(get_all_tasks())
+
+#     # pprint.pp(store_search("tasks with low priority"))
+
+#     build_self_query_retriever(llm, vector_store)
