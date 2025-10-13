@@ -53,6 +53,7 @@ from langchain.chains.query_constructor.ir import (
 )
 from pydantic import BaseModel
 from datetime import datetime
+import re
 
 load_dotenv()
 os.getenv("GOOGLE_API_KEY")
@@ -65,7 +66,7 @@ llm = ChatOllama(model="llama3.1")
 model = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
 llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
 
-embeddings = OllamaEmbeddings(model="all-minilm")
+embeddings = OllamaEmbeddings(model="mxbai-embed-large:latest")
 
 # embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001")
 class Search(BaseModel):
@@ -156,16 +157,22 @@ def get_all_tasks():
         assignees = " and ".join(response["assignees"])
         comments  = " and ".join(response["comments"])
         try:
-            start_date = datetime.strptime(response['start_date'], "%Y/%m/%d")
-        except:
+            date_obj = datetime.strptime(response['start_date'], "%Y-%m-%d")
+            start_date = date_obj.timestamp()
+        except Exception as e:
+            # print(e)
             start_date = None
         try:
-            target_date = datetime.strptime(response['target_date'], "%Y/%m/%d")
-        except:
+            date_obj = datetime.strptime(response['target_date'], "%Y-%m-%d")
+            target_date = date_obj.timestamp()
+        except Exception as e:
+            # print(e)
             target_date = None
         try:
-            completed_at = datetime.strptime(response['completed_at'], "%Y/%m/%d")
-        except:
+            date_obj = datetime.strptime(response['completed_at'], "%Y-%m-%d")
+            completed_at = date_obj.timestamp()
+        except Exception as e:
+            # print(e)
             completed_at = None
         content = f"This is a work item that has name: {response['name']}, assignees: {assignees}, \
             'comments': {comments}, 'start date': {response['start_date']}, 'target date': {response['target_date']}, \
@@ -272,7 +279,7 @@ def build_metadata_field_info() -> List[AttributeInfo]:
         AttributeInfo(
             name="target date",
             description="The due date of the task, in the format YYYY-MM-DD. If the task does not have a due date, the value is None",
-            type="timestamp",
+            type="float",
         ),
     ]
 
@@ -292,9 +299,10 @@ def build_self_query_retriever(
 
     document_content_description = "Information of a work item."
 
-    target_date = dateutil.parser.parse("2025-10-09").toordinal()
-
-    print(f"Target date ordinal: {target_date}")
+    # date_obj = datetime.strptime(response['target_date'], "%Y-%m-%d")
+    # target_date = date_obj.timestamp()
+    
+    # print(f"Target date ordinal: {target_date}")
 
     examples = [
         ("Find all tasks with priority high",
@@ -302,7 +310,9 @@ def build_self_query_retriever(
         ("Find all tasks with priority low and state is Todo",
          {"query": "get all tasks", "filter": 'and(eq("priority", "low"), eq("state", "Todo")'}),
         ("Tasks with target date before 2025-10-09",
-        {"query": "get all tasks", "filter": f'lt("target date", "{target_date}")'}),
+        {"query": "get all tasks","filter": f'lt("start date", {datetime(2025, 10, 9).timestamp()})'}),
+        ("Tasks not in state Todo",
+        {"query": "get all tasks","filter": 'ne("state", "Todo")'}),
     ]
 
     if examples:
@@ -322,9 +332,9 @@ def build_self_query_retriever(
             query_constructor=query_constructor,
             vectorstore=vector_store,
             structured_query_translator=ChromaTranslator(),
-            # verbose=True
+            verbose=True,
             search_type="similarity_score_threshold",
-            search_kwargs={"k": 40},
+            search_kwargs={"k": 40, 'score_threshold': 0.1},
         )
     else:
         # Trường hợp store_search: dùng from_llm
@@ -370,29 +380,56 @@ def store_search(query: str) -> Dict[str, Any]:
     # )
     # retriever.add_documents(tasks, ids=None)
 
-    retriever = build_self_query_retriever(llm, vector_store)
+    # query_date = "2026-01-15"
+    # query_timestamp = datetime.strptime(query_date, "%Y-%m-%d").timestamp()
+
+    # # Tạo retriever với metadata filter
     # retriever = vector_store.as_retriever(
-    #     search_type="similarity_score_threshold", search_kwargs={"score_threshold": 0.3}
+    #     search_kwargs={
+    #         "filter": {"target date": {"$lt": query_timestamp}},
+    #         "k": 10
+    #     }
     # )
+
+    # print(f"test: {retriever.invoke("tasks")}")
+
+    # retriever = build_self_query_retriever(llm, vector_store)
+    retriever = vector_store.as_retriever(
+        search_type="similarity_score_threshold", search_kwargs={"score_threshold": 0.1}
+    )
 
     ##### query analysis filter
     # comparisons = construct_comparisons(query)
     # _filter = Operation(operator=Operator.AND, arguments=comparisons)
     # chrom_filter = ChromaTranslator().visit_operation(_filter)
 
-    # ##### compressor
-    # splitter = CharacterTextSplitter(chunk_size=30, chunk_overlap=1, separator=", ")
-    # redundant_filter = EmbeddingsRedundantFilter(embeddings=embeddings)
-    # relevant_filter = EmbeddingsFilter(embeddings=embeddings, similarity_threshold=0.1)
-    # pipeline_compressor = DocumentCompressorPipeline(
-    #     transformers=[splitter, redundant_filter, relevant_filter]
-    # )
+    ##### compressor
+    splitter = CharacterTextSplitter(chunk_size=30, chunk_overlap=1, separator=", ")
+    redundant_filter = EmbeddingsRedundantFilter(embeddings=embeddings)
+    relevant_filter = EmbeddingsFilter(embeddings=embeddings, similarity_threshold=0.1)
+    pipeline_compressor = DocumentCompressorPipeline(
+        transformers=[splitter, redundant_filter]
+    )
+
+    # Kiểm tra từng bước
+    tasks = get_all_tasks()
+    split_docs = splitter.split_documents(tasks)
+    print("Documents after splitting:")
+    pprint.pprint(split_docs)
+
+    filtered_docs = redundant_filter.transform_documents(split_docs)
+    print("Documents after redundant filter:")
+    pprint.pprint(filtered_docs)
+
+    # final_docs = relevant_filter.transform_documents(filtered_docs)
+    # print("Documents after relevant filter:")
+    # pprint.pprint(final_docs)
 
     # retriever = Chroma.from_documents(tasks, embeddings).as_retriever()
 
-    # compression_retriever = ContextualCompressionRetriever(
-    #     base_compressor=pipeline_compressor, base_retriever=retriever
-    # )
+    compression_retriever = ContextualCompressionRetriever(
+        base_compressor=pipeline_compressor, base_retriever=retriever
+    )
 
     # ##### embeddings filter
     # embeddings_filter = EmbeddingsFilter(embeddings=embeddings, similarity_threshold=0.1)
@@ -400,9 +437,11 @@ def store_search(query: str) -> Dict[str, Any]:
     #     base_compressor=embeddings_filter, base_retriever=retriever
     # )
 
-    compressed_docs = retriever.invoke(query)
-    reordering = LongContextReorder()
-    reordered_docs = reordering.transform_documents(compressed_docs)
+    
+
+    compressed_docs = compression_retriever.invoke(query)
+    # reordering = LongContextReorder()
+    # reordered_docs = reordering.transform_documents(compressed_docs)
 
     # docs = retriever.get_relevant_documents(query=query.query, filter=chrom_filter)
 
@@ -506,26 +545,48 @@ def generate_filtered_query(search: Search) -> str:
     result = ChromaTranslator().visit_operation(_filter)
     print(result)
 
-tools = [store_search]
+def process_date_query(query: str) -> str:
+    """
+    Chuyển date trong query thành timestamp description
+    để LLM hiểu và generate filter đúng
+    """
+    # Tìm date pattern YYYY-MM-DD trong query
+    date_pattern = r'\d{4}-\d{2}-\d{2}'
+    match = re.search(date_pattern, query)
+    
+    if match:
+        date_str = match.group()
+        timestamp = datetime.strptime(date_str, "%Y-%m-%d").timestamp()
+        # Thêm thông tin timestamp vào query
+        query += f" (timestamp: {timestamp})"
+    
+    return query
+
+
+tools = [store_search, process_date_query]
 
 llm_with_tools = model.bind_tools(tools)
 
 today = datetime.today().strftime('%Y-%m-%d')
 # System message
 sys_msg = SystemMessage(
-    content=f"You are a helpful assistant specialized at getting tasks information for users. Use the tool provided to you to get all task related information, \
+    content="You are a helpful assistant specialized at getting tasks information for users. Use the tool provided to you to get all task related information, \
         including name, priority, state, comments, start date, target date (due date), completed at, description and assignees, \
         Priority level from highest to lowest is: urgent, high, medium, low, none. A task is the highest priority task if all other tasks have lower priority. \
-        A missed deadline task is a task that has its target date (due date) before {today} and its state is not Done. \
+        A missed deadline task is a task that has its target date (due date) before completed at (date). \
         Use information from provided tool to generate answers to the USER INPUT. \
         Use the following format to find your answers: \
         Question: The input query you must answer. \
-        Thought: Carefully consider the query to create a tool call. The store_search tool cannot retrieve ambiguity queries, \
-        so make sure to use simple queries. Break into smaller queries if possible. \
+        Thought: Carefully consider the query to create a tool call. \
+        IMPORTANT: All dates in query need to be converted to timestamp using process_date_query before calling to store_search\
         Action: Make the tool call to find the answer. \
         Observation: The RELEVANT INFORMATION to the inquiry. \
-        Repeat Question-thought-action-output until you are sure of the correct response. Only repeat after the previous Question-thought-action-output finishes."
+        Repeat Question-thought-action-output until you are sure of the correct response. \
+        IMPORTANT: Only repeat after the previous chains of thought finishes. Don't create parallel chains of thought. "
 )
+
+#The store_search tool cannot retrieve ambiguity queries, so you are recommended to use simple queries. \
+ #       Break abstract queries into multiple simple queries, then make a plan of calling tools with those simple queries if needed.\
 
 # "If the user query is about finding tasks with the highest priority, search for tasks with priority from highest to lowest.\
 #         Priority level from highest to lowest is: urgent, high, medium, low, none. "
@@ -588,18 +649,18 @@ compiled_graph = task_graph.compile()
 # print(compiled_graph.get_graph().draw_mermaid())
 
 def stream_graph_updates(user_input: str):
-    # config = {"configurable": {"thread_id": "1"}}
-    # for event in compiled_graph.stream({"messages": [{"role": "user", "content": user_input}]}, config,
-    #     stream_mode="values",
-    # ):
-    #     for value in event.values():
-    #         print("Assistant:", value[-1].content)
-    for chunk in compiled_graph.stream(
-        {"messages": [{"role": "user", "content": user_input}]},
-        stream_mode="updates"
+    config = {"configurable": {"thread_id": "1"}}
+    for event in compiled_graph.stream({"messages": [{"role": "user", "content": user_input}]}, config,
+        stream_mode="values",
     ):
-        print(chunk)
-        print("\n")
+        for value in event.values():
+            print("Assistant:", value[-1].content)
+    # for chunk in compiled_graph.stream(
+    #     {"messages": [{"role": "user", "content": user_input}]},
+    #     stream_mode="updates"
+    # ):
+    #     print(chunk)
+    #     print("\n")
 
 # while True:
 #     try:
@@ -616,16 +677,16 @@ def stream_graph_updates(user_input: str):
 #         break
 
 if __name__ == "__main__":
-# # #     # result = store_search("list all tasks assigned to tuoithodudoi.phungquan")
-# # #     # result = store_search("tasks with highest priority")
+# #     # result = store_search("list all tasks assigned to tuoithodudoi.phungquan")
+# #     # result = store_search("tasks with highest priority")
 
     
-# # #     result = store_search("NOT target_date:None AND target_date:*")
+# #     result = store_search("NOT target_date:None AND target_date:*")
 
-# # #     pprint.pprint(result["result"])
-# # #     # get_all_tasks()
+# #     pprint.pprint(result["result"])
+# #     # get_all_tasks()
 
-#     # pprint.pprint(get_all_tasks())
+    # pprint.pprint(get_all_tasks())
 
     # pprint.pp(store_search("medium priority tasks with state Backlog"))
 
@@ -633,4 +694,4 @@ if __name__ == "__main__":
 
     # tmp = generate_query_from_user_input("tasks with target date before 2025-10-09")
     # generate_filtered_query(tmp)
-    pprint.pp(store_search("tasks with target date before 2025-10-09"))
+    pprint.pp(store_search("tasks"))
