@@ -2,9 +2,9 @@ import os
 from typing import List, Dict, Any, Optional, Literal
 from langgraph.graph import StateGraph, START, END, MessagesState
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_core.messages import AnyMessage, SystemMessage, HumanMessage
+from langchain_core.messages import AnyMessage, SystemMessage, HumanMessage, AIMessage, ToolMessage
 
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, FewShotChatMessagePromptTemplate
 from langchain_core.runnables import RunnablePassthrough
 
 from langgraph.graph.message import add_messages
@@ -393,10 +393,10 @@ def store_search(query: str) -> Dict[str, Any]:
 
     # print(f"test: {retriever.invoke("tasks")}")
 
-    # retriever = build_self_query_retriever(llm, vector_store)
-    retriever = vector_store.as_retriever(
-        search_type="similarity_score_threshold", search_kwargs={"score_threshold": 0.1}
-    )
+    retriever = build_self_query_retriever(llm, vector_store)
+    # retriever = vector_store.as_retriever(
+    #     search_type="similarity_score_threshold", search_kwargs={"score_threshold": 0.1}
+    # )
 
     ##### query analysis filter
     # comparisons = construct_comparisons(query)
@@ -404,22 +404,22 @@ def store_search(query: str) -> Dict[str, Any]:
     # chrom_filter = ChromaTranslator().visit_operation(_filter)
 
     ##### compressor
-    splitter = CharacterTextSplitter(chunk_size=30, chunk_overlap=1, separator=", ")
-    redundant_filter = EmbeddingsRedundantFilter(embeddings=embeddings)
-    relevant_filter = EmbeddingsFilter(embeddings=embeddings, similarity_threshold=0.1)
-    pipeline_compressor = DocumentCompressorPipeline(
-        transformers=[splitter, redundant_filter]
-    )
+    # splitter = CharacterTextSplitter(chunk_size=30, chunk_overlap=1, separator=", ")
+    # redundant_filter = EmbeddingsRedundantFilter(embeddings=embeddings)
+    # relevant_filter = EmbeddingsFilter(embeddings=embeddings, similarity_threshold=0.1)
+    # pipeline_compressor = DocumentCompressorPipeline(
+    #     transformers=[splitter, redundant_filter]
+    # )
 
     # Kiểm tra từng bước
-    tasks = get_all_tasks()
-    split_docs = splitter.split_documents(tasks)
-    print("Documents after splitting:")
-    pprint.pprint(split_docs)
+    # tasks = get_all_tasks()
+    # split_docs = splitter.split_documents(tasks)
+    # print("Documents after splitting:")
+    # pprint.pprint(split_docs)
 
-    filtered_docs = redundant_filter.transform_documents(split_docs)
-    print("Documents after redundant filter:")
-    pprint.pprint(filtered_docs)
+    # filtered_docs = redundant_filter.transform_documents(split_docs)
+    # print("Documents after redundant filter:")
+    # pprint.pprint(filtered_docs)
 
     # final_docs = relevant_filter.transform_documents(filtered_docs)
     # print("Documents after relevant filter:")
@@ -427,9 +427,9 @@ def store_search(query: str) -> Dict[str, Any]:
 
     # retriever = Chroma.from_documents(tasks, embeddings).as_retriever()
 
-    compression_retriever = ContextualCompressionRetriever(
-        base_compressor=pipeline_compressor, base_retriever=retriever
-    )
+    # compression_retriever = ContextualCompressionRetriever(
+    #     base_compressor=pipeline_compressor, base_retriever=retriever
+    # )
 
     # ##### embeddings filter
     # embeddings_filter = EmbeddingsFilter(embeddings=embeddings, similarity_threshold=0.1)
@@ -439,7 +439,7 @@ def store_search(query: str) -> Dict[str, Any]:
 
     
 
-    compressed_docs = compression_retriever.invoke(query)
+    # compressed_docs = compression_retriever.invoke(query)
     # reordering = LongContextReorder()
     # reordered_docs = reordering.transform_documents(compressed_docs)
 
@@ -453,9 +453,9 @@ def store_search(query: str) -> Dict[str, Any]:
     # sub_docs = vectorstore.similarity_search(query)
     # print(sub_docs[0].page_content)
 
-    # result = retriever.invoke(query)
-    return compressed_docs
-    # return result
+    result = retriever.invoke(query)
+    # return compressed_docs
+    return result
 
 
 def priority_query(start_priority: str = "urgent") -> Dict[str, Any]:
@@ -567,23 +567,86 @@ tools = [store_search, process_date_query]
 
 llm_with_tools = model.bind_tools(tools)
 
+
+examples = [
+    HumanMessage(
+        "Missed deadline tasks", name="example_user"
+    ),
+    AIMessage(
+        "",
+        name="example_assistant",
+        tool_calls=[
+            {"name": "store_search", "args": {"query":"state Done"}, "id": "1"}
+        ],
+    ),
+    ToolMessage("Document(id='db2f40ac-8216-49f9-a501-e018cdda8259', metadata={'state': 'Done', 'target date': 1758240000.0, 'start date': 1758240000.0, 'priority': 'none'}, page_content='This is a work item that has name: 28-6, assignees: nguyen.do.cong and tuoithodudoi.phungquan', 'comments': , 'start date': 2025-09-19, 'target date': 2025-09-19, 'completed at': 2025-10-13T03:40:04.150141Z, 'description': , 'priority': none, 'state': Done.')", tool_call_id="1"),
+    AIMessage(
+        "I have already searched for tasks in 'Done' and 'In Progress' states. Now I need to analyze the results to identify the missed deadline tasks.",
+        name="example_assistant",
+    ),
+    AIMessage(
+        "Here are the missed deadline tasks:\
+        1. Task with name 28-6:\
+        - State: Done\
+        - Target date: 2025-09-19 (timestamp: 1758240000.0)\
+        - Completed at: 2025-10-13T03:40:04.150141Z\
+        Since the target date (2025-09-19) is before the completed at date (2025-10-13), this is a missed deadline task.\
+        2. Task with name test-assign:\
+        - State: In Progress\
+        - Target date: 2025-09-21 (timestamp: 1758412800.0)\
+        Since the target date (2025-09-21) is before 2025-10-13, this is a missed deadline task.",
+        name="example_assistant",
+    ),
+]
+
 today = datetime.today().strftime('%Y-%m-%d')
+
 # System message
 sys_msg = SystemMessage(
-    content="You are a helpful assistant specialized at getting tasks information for users. Use the tool provided to you to get all task related information, \
+    content=f"You are a helpful assistant specialized at getting tasks information for users. Use the tool provided to you to get all task related information, \
         including name, priority, state, comments, start date, target date (due date), completed at, description and assignees, \
         Priority level from highest to lowest is: urgent, high, medium, low, none. A task is the highest priority task if all other tasks have lower priority. \
-        A missed deadline task is a task that has its target date (due date) before completed at (date). \
+        A missed deadline task is a task that has state Done and its target date (due date) is before completed at (date) OR \
+        a task that has state 'In Progress' and its target date is before {today}. \
         Use information from provided tool to generate answers to the USER INPUT. \
         Use the following format to find your answers: \
         Question: The input query you must answer. \
         Thought: Carefully consider the query to create a tool call. \
+        The store_search cannot search for ambiguity queries, so make sure your queries are simple enough, \
+        even if that means you have to make some round of calling tools with some sets of simplified queries. \
         IMPORTANT: All dates in query need to be converted to timestamp using process_date_query before calling to store_search\
         Action: Make the tool call to find the answer. \
         Observation: The RELEVANT INFORMATION to the inquiry. \
         Repeat Question-thought-action-output until you are sure of the correct response. \
         IMPORTANT: Only repeat after the previous chains of thought finishes. Don't create parallel chains of thought. "
 )
+
+system = f"You are a helpful assistant specialized at getting tasks information for users. Use the tool provided to you to get all task related information, \
+        including name, priority, state, comments, start date, target date (due date), completed at, description and assignees, \
+        Priority level from highest to lowest is: urgent, high, medium, low, none. A task is the highest priority task if all other tasks have lower priority. \
+        A missed deadline task is a task that has state Done and its target date (due date) is before completed at (date) OR \
+        a task that has state 'In Progress' and its target date is before {today}. \
+        Use information from provided tool to generate answers to the USER INPUT. Only provide answer with info related to the USER INPUT\
+        Use the following format to find your answers: \
+        Question: The input query you must answer. \
+        Thought: Carefully consider the query to create a tool call. \
+        The store_search cannot search for ambiguity queries, so make sure your queries are simple enough, \
+        even if that means you have to make some round of calling tools with some sets of simplified queries. \
+        IMPORTANT: All dates in query need to be converted to timestamp using process_date_query before calling to store_search\
+        Action: Make the tool call to find the answer. \
+        Observation: The RELEVANT INFORMATION to the inquiry. \
+        Repeat Question-thought-action-output until you are sure of the correct response. \
+        IMPORTANT: Only repeat after the previous chains of thought finishes. Don't create parallel chains of thought. "
+
+few_shot_prompt = ChatPromptTemplate.from_messages(
+    [
+        ("system", system),
+        *examples,
+        ("human", "{query}"),
+    ]
+)
+
+chain = {"query": RunnablePassthrough()} | few_shot_prompt | llm_with_tools
 
 #The store_search tool cannot retrieve ambiguity queries, so you are recommended to use simple queries. \
  #       Break abstract queries into multiple simple queries, then make a plan of calling tools with those simple queries if needed.\
@@ -615,8 +678,8 @@ __all__ = [
 
 # node definitions
 def assistant(state: State):
-    print(llm_with_tools.invoke([sys_msg] + state["messages"]))
-    return {"messages": [llm_with_tools.invoke([sys_msg] + state["messages"])]}
+    print(chain.invoke(state["messages"]))
+    return {"messages": [chain.invoke(state["messages"])]}
 
 
 # build the graph
@@ -662,36 +725,36 @@ def stream_graph_updates(user_input: str):
     #     print(chunk)
     #     print("\n")
 
-# while True:
-#     try:
-#         user_input = input("User: ")
-#         if user_input.lower() in ["quit", "exit", "q"]:
-#             print("Goodbye!")
-#             break
-#         stream_graph_updates(user_input)
-#     except:
-#         # fallback if input() is not available
-#         user_input = "What do you know about LangGraph?"
-#         print("User: " + user_input)
-#         stream_graph_updates(user_input)
-#         break
+while True:
+    try:
+        user_input = input("User: ")
+        if user_input.lower() in ["quit", "exit", "q"]:
+            print("Goodbye!")
+            break
+        stream_graph_updates(user_input)
+    except:
+        # fallback if input() is not available
+        user_input = "What do you know about LangGraph?"
+        print("User: " + user_input)
+        stream_graph_updates(user_input)
+        break
 
-if __name__ == "__main__":
-# #     # result = store_search("list all tasks assigned to tuoithodudoi.phungquan")
-# #     # result = store_search("tasks with highest priority")
+# if __name__ == "__main__":
+# # #     # result = store_search("list all tasks assigned to tuoithodudoi.phungquan")
+# # #     # result = store_search("tasks with highest priority")
 
     
-# #     result = store_search("NOT target_date:None AND target_date:*")
+# # #     result = store_search("NOT target_date:None AND target_date:*")
 
-# #     pprint.pprint(result["result"])
-# #     # get_all_tasks()
+# # #     pprint.pprint(result["result"])
+# # #     # get_all_tasks()
 
-    # pprint.pprint(get_all_tasks())
+#     # pprint.pprint(get_all_tasks())
 
-    # pprint.pp(store_search("medium priority tasks with state Backlog"))
+#     # pprint.pp(store_search("medium priority tasks with state Backlog"))
 
-    # build_self_query_retriever(llm, vector_store)
+#     # build_self_query_retriever(llm, vector_store)
 
-    # tmp = generate_query_from_user_input("tasks with target date before 2025-10-09")
-    # generate_filtered_query(tmp)
-    pprint.pp(store_search("tasks"))
+#     # tmp = generate_query_from_user_input("tasks with target date before 2025-10-09")
+#     # generate_filtered_query(tmp)
+#     pprint.pp(store_search("tasks"))
