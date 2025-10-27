@@ -1,0 +1,408 @@
+User: list all task of project Cong
+Assistant:
+'list all task of project Cong'
+content='Question: I need to list all tasks related to the project "Cong".\nThought: I should use the `store_search` tool to find the tasks related to the project "Cong".\nAction:\n' additional_kwargs={'tool_calls': [{'id': 'tool_0_store_search_Ze3VnwsW3po4K2Hb18Ef', 'function': {'arguments': '{"query":"project Cong"}', 'name': 'store_search'}, 'type': 'function', 'index': 0}], 'refusal': None} response_metadata={'token_usage': {'completion_tokens': 49, 'prompt_tokens': 426, 'total_tokens': 475, 'completion_tokens_details': {'accepted_prediction_tokens': None, 'audio_tokens': None, 'reasoning_tokens': 0, 'rejected_prediction_tokens': None, 'image_tokens': 0}, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 0}}, 'model_name': 'google/gemini-2.0-flash-001', 'system_fingerprint': None, 'id': 'gen-1761279097-Bnr8RN8e77Rn0kY2v8CC', 'service_tier': None, 'finish_reason': 'tool_calls', 'logprobs': None} id='run--3475b86e-7fb3-4f3e-831e-f9bcd5ea8856-0' tool_calls=[{'name': 'store_search', 'args': {'query': 'project Cong'}, 'id': 'tool_0_store_search_Ze3VnwsW3po4K2Hb18Ef', 'type': 'tool_call'}] usage_metadata={'input_tokens': 426, 'output_tokens': 49, 'total_tokens': 475, 'input_token_details': {'cache_read': 0}, 'output_token_details': {'reasoning': 0}}
+Assistant:
+('Question: I need to list all tasks related to the project "Cong".\n'
+ 'Thought: I should use the `store_search` tool to find the tasks related to '
+ 'the project "Cong".\n'
+ 'Action:\n')
+Query: project Cong, Filter: <class 'filter'>
+Assistant:
+("[Document(id='f212885b-b0dd-454d-b62a-16f9b99151d3', metadata={'priority': "
+ "'none', 'state': 'Backlog', 'task id': "
+ "'8c006de2-858f-4d3f-a26e-7e934a113a82', 'project name': 'Cong'}, "
+ 'page_content="This is a task that has name: 1. Create Projects 🎯, assignees: '
+ ",             'comments': , 'start date': None, 'target date': "
+ "None,             'description': A Project in Plane is where all your work "
+ 'comes together. Think of it as a base that organizes your work items and '
+ 'everything else your team needs to get things done.Note: This tutorial is '
+ "already set up as a Project, and these cards you're reading are work items "
+ "within it!We're showing you how to create a new project just so you'll know "
+ "exactly what to do when you're ready to start your own real one.Look over at "
+ 'the left sidebar and find where it says Projects.Hover your mouse there and '
+ "you'll see a little + icon pop up - go ahead and click it!A modal opens "
+ 'where you can give your project a name and other details.Notice the Access '
+ 'type options? Public means anyone (except Guest users) can see and join it, '
+ 'while Private keeps it just for those you invite.Tip: You can also quickly '
+ 'create a new project by using the keyboard shortcut P from anywhere in '
+ 'Plane!,             \'priority\': none, \'state\': Backlog."), '
+ "Document(id='a3f077d9-c18a-45f5-92d6-4e4fef5a03a6', metadata={'state': "
+ "'Done', 'target date': 1758240000.0, 'task id': "
+ "'415f0123-0c47-4cfb-85dd-0f5149b3d284', 'priority': 'none', 'project name': "
+ '\'Cong\', \'start date\': 1758240000.0}, page_content="This is a task that '
+ 'has name: 28-6, assignees: nguyen.do.cong and '
+ "tuoithodudoi.phungquan,             'comments': , 'start date': 2025-09-19, "
+ "'target date': 2025-09-19,             'description': ,             "
+ '\'priority\': none, \'state\': Done."), '
+ "Document(id='a001d365-e94e-49e5-b19b-4aa914386fdc', metadata={'state': 'In "
+ "Progress', 'task id': 'd773e26e-2ee8-4a3b-a4b5-65c349eee05f', 'project "
+ "name': 'Cong', 'priority': 'medium', 'start date': 1758240000.0, 'target "
+ 'date\': 1758412800.0}, page_content="This is a task that has name: '
+ "test-assign, assignees: tuoithodudoi.phungquan,             'comments': , "
+ "'start date': 2025-09-19, 'target date': 2025-09-21,             "
+ "'description': ,             'priority': medium, 'state': In "
+ 'Progress."), Document(id=\'1468e88a-0223-4cab-900c-46be0ca3dd1b\', '
+ "metadata={'task id': '959800e6-750a-4070-bf68-5a39bfbc9c0e', 'state': "
+ "'Backlog', 'priority': 'low', 'project name': 'Cong'}, "
+ 'page_content="This is a task that has name: 2. Invite your team 🤜🤛, '
+ "assignees: ,             'comments': , 'start date': None, 'target date': "
+ "None,             'description': Let's get your teammates on board!First, "
+ "you'll need to invite them to your workspace before they can join specific "
+ 'projects:Click on your workspace name in the top-left corner, then select '
+ 'Settings from the dropdown.Head over to the Members tab - this is your user '
+ "management hub. Click Add member on the top right.Enter your teammate's "
+ 'email address. Select a role for them (Admin, Member or Guest) that '
+ 'determines what they can do in the workspace.Your team member will get an '
+ "email invite. Once they've joined your workspace, you can add them to "
+ "specific projects.To do this, go to your project's Settings page.Find the "
+ 'Members section, select your teammate, and assign them a project role - this '
+ "controls what they can do within just this project.That's it!To learn more "
+ "about user management, see Manage users and roles.,             'priority': "
+ 'low, \'state\': Backlog."), '
+ "Document(id='afea8550-be35-4bcd-8ec1-e616e4e000b1', metadata={'task id': "
+ "'d5c232d9-01df-4277-b5b8-70c8a54bfd1e', 'project name': 'Cong', 'state': "
+ '\'Backlog\', \'priority\': \'none\'}, page_content="This is a task that has '
+ 'name: 3. Create and assign Work Items ✏️, assignees: ,             '
+ "'comments': , 'start date': None, 'target date': None,             "
+ "'description': A work item is the fundamental building block of your "
+ 'project. Think of these as the actionable tasks that move your project '
+ "forward.Ready to add something to your project's to-do list? Here's "
+ 'how:Click the Add work item button in the top-right corner of the Work Items '
+ 'page.Give your task a clear title and add any details in the description.Set '
+ 'up the essentials:Assign it to a team member (or yourself!)Choose a priority '
+ "levelAdd start and due dates if there's a timelineTip: Save time by using "
+ 'the keyboard shortcut C from anywhere in your project to quickly create a '
+ 'new work item!Want to dive deeper into all the things you can do with work '
+ "items? Check out our documentation.,             'priority': none, 'state': "
+ 'Backlog."), Document(id=\'74920324-877b-4381-9f0c-a14295d37e2f\', '
+ "metadata={'project name': 'Cong', 'priority': 'none', 'state': 'Backlog', "
+ '\'task id\': \'30f1390e-6a3d-4763-9e72-26e253dcca52\'}, page_content="This '
+ 'is a task that has name: Welcome to Plane 👋, assignees: ,             '
+ "'comments': , 'start date': None, 'target date': None,             "
+ "'description': Hey there! This demo project is your playground to get "
+ "hands-on with Plane. We've set this up so you can click around and see how "
+ 'everything works without worrying about breaking anything.Each work item is '
+ 'designed to make you familiar with the basics of using Plane. Just follow '
+ 'along card by card at your own pace.First thing to tryLook in the Properties '
+ 'section below where it says State: Todo.Click on it and change it to Done '
+ 'from the dropdown. Alternatively, you can drag and drop the card to the Done '
+ 'column.,             \'priority\': none, \'state\': Backlog."), '
+ "Document(id='938d1f92-73e0-451b-b91d-29d63904e2c6', metadata={'priority': "
+ "'none', 'state': 'Done', 'project name': 'Cong', 'task id': "
+ "'0d995261-afc7-4044-b45e-d27734ec3ea8', 'start date': 1757980800.0}, "
+ 'page_content="This is a task that has name: bug, assignees: '
+ "nguyen.do.cong,             'comments': bug fixed and assign this task to "
+ "Cong, 'start date': 2025-09-16, 'target date': None,             "
+ '\'description\': ,             \'priority\': none, \'state\': Done."), '
+ "Document(id='9b5653ec-3702-4ec8-a3e5-25863760a381', metadata={'project "
+ "name': 'Cong', 'task id': 'e9d5ed94-f98f-4342-875a-a8f29000e4bb', 'state': "
+ '\'Todo\', \'priority\': \'none\'}, page_content="This is a task that has '
+ 'name: Setup Cycles, assignees: tuoithodudoi.phungquan,             '
+ "'comments': let nguyen.do.cong do this task, 'start date': None, 'target "
+ "date': None,             'description': A Cycle in Plane is like a sprint - "
+ 'a dedicated timeframe where your team focuses on completing specific work '
+ 'items. It helps you break down your project into manageable chunks with '
+ 'clear start and end dates so everyone knows what to work on and when it '
+ 'needs to be done.Setup CyclesGo to the Cycles section in your project (you '
+ 'can find it in the left sidebar)Click the Add cycle button in the top-right '
+ 'cornerEnter details and set the start and end dates for your cycle.Click '
+ "Create cycle and you're ready to go!Add existing work items to the Cycle or "
+ 'create new ones.Tip: To create a new Cycle quickly, just press Q from '
+ 'anywhere in your project!Want to learn more?Starting and stopping '
+ 'cyclesTransferring work items between cyclesTracking progress with '
+ 'chartsCheck out our detailed documentation for everything you need to '
+ 'know!,             \'priority\': none, \'state\': Todo."), '
+ "Document(id='5c7e072d-b881-4cc1-8591-6a9867874182', metadata={'task id': "
+ "'e43aa54e-7d33-4c7e-988f-f1e207fac1c5', 'project name': 'Cong', 'priority': "
+ '\'low\', \'state\': \'In Progress\'}, page_content="This is a task that has '
+ 'name: testing, assignees: nguyen.do.cong and '
+ "tuoithodudoi.phungquan,             'comments': tôi đẫ hoàn thành and what "
+ "will this return and testing and testing, 'start date': None, 'target date': "
+ "None,             'description': ,             'priority': low, 'state': In "
+ 'Progress."), Document(id=\'655750b2-1c2b-4f23-b392-c4a686193378\', '
+ "metadata={'project name': 'Cong', 'priority': 'none', 'state': 'Done', 'task "
+ 'id\': \'f927f4ef-8419-47a0-bf4e-7af0787045a7\'}, page_content="This is a '
+ 'task that has name: 4. Visualize your work 🔮, assignees: ,             '
+ "'comments': , 'start date': None, 'target date': None,             "
+ "'description': Plane offers multiple ways to look at your work items "
+ "depending on what you need to see. Let's explore how to change views and "
+ 'customize them!Switch between layoutsLook at the top toolbar in your '
+ "project. You'll see several layout icons.Click any of these icons to "
+ 'instantly switch between layouts.Tip: Different layouts work best for '
+ 'different needs. Try Board view for tracking progress, Calendar for deadline '
+ 'management, and Gantt for timeline planning! See Layouts for more '
+ 'info.Filter and display optionsNeed to focus on specific work?Click the '
+ 'Filters dropdown in the toolbar. Select criteria and choose which items to '
+ 'show.Click the Display dropdown to tailor how the information appears in '
+ 'your layoutCreated the perfect setup? Save it for later by clicking the the '
+ 'Save View button.Access saved views anytime from the Views section in your '
+ 'sidebar.,             \'priority\': none, \'state\': Done."), '
+ "Document(id='d7536d3a-f372-4e5b-8e8d-ab89b0cfce46', metadata={'state': 'In "
+ "Progress', 'task id': '1611ec7f-9591-4551-a266-39f084f9c949', 'project "
+ "name': 'Cong', 'priority': 'none'}, page_content='This is a task that has "
+ 'name: 6. Customize your settings ⚙️, assignees: ,             '
+ "\\'comments\\': , \\'start date\\': None, \\'target date\\': "
+ "None,             \\'description\\': Now that you\\'re getting familiar with "
+ "Plane, let\\'s explore how you can customize settings to make it work just "
+ 'right for you and your team!Workspace settingsRemember those workspace '
+ "settings we mentioned when inviting team members? There\\'s a lot more you "
+ 'can do there:Invite and manage workspace membersUpgrade plans and manage '
+ 'billingImport data from other toolsExport your dataManage '
+ 'integrationsProject SettingsEach project has its own settings where you '
+ 'can:Change project details and visibilityInvite specific members to just '
+ 'this projectCustomize your workflow States (like adding a "Testing" '
+ 'state)Create and organize LabelsEnable or disable features you need (or '
+ "don\\'t need)Your Profile SettingsYou can also customize your own personal "
+ 'experience! Click on your profile icon in the top-right corner to '
+ 'find:Profile settings (update your name, photo, etc.)Choose your timezone '
+ 'and preferred language for the interfaceEmail notification preferences (what '
+ 'you want to be alerted about)Appearance settings (light/dark mode)Taking a '
+ 'few minutes to set things up just the way you like will make your everyday '
+ 'Plane experience much smoother!Note: Some settings are only available to '
+ "workspace or project admins. If you don\\'t see certain options, you might "
+ "need admin access.,             \\'priority\\': none, \\'state\\': In "
+ "Progress.')]")
+content='Question: List all tasks related to the project "Cong".\nThought: I have already used the `store_search` tool to find the tasks related to the project "Cong" and have the information, so I can directly provide the answer.\nAnswer:\nHere are the tasks for project Cong:\n1. Create Projects 🎯 (Priority: none, State: Backlog)\n2. 28-6 (Priority: none, State: Done, Target date: 2025-09-19, Start date: 2025-09-19)\n3. test-assign (Priority: medium, State: In Progress, Target date: 2025-09-21, Start date: 2025-09-19)\n4. Invite your team 🤜🤛 (Priority: low, State: Backlog)\n5. Create and assign Work Items ✏️ (Priority: none, State: Backlog)\n6. Welcome to Plane 👋 (Priority: none, State: Backlog)\n7. bug (Priority: none, State: Done, Start date: 2025-09-16)\n8. Setup Cycles (Priority: none, State: Todo)\n9. testing (Priority: low, State: In Progress)\n10. 4. Visualize your work 🔮 (Priority: none, State: Done)\n11. 6. Customize your settings ⚙️ (Priority: none, State: In Progress)' additional_kwargs={'refusal': None} response_metadata={'token_usage': {'completion_tokens': 329, 'prompt_tokens': 4322, 'total_tokens': 4651, 'completion_tokens_details': {'accepted_prediction_tokens': None, 'audio_tokens': None, 'reasoning_tokens': 0, 'rejected_prediction_tokens': None, 'image_tokens': 0}, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 0}}, 'model_name': 'google/gemini-2.0-flash-001', 'system_fingerprint': None, 'id': 'gen-1761279101-EVVqMorYmIt1rUdNgTGG', 'service_tier': None, 'finish_reason': 'stop', 'logprobs': None} id='run--3ea36a67-9e82-403d-8c8c-feffb0a46af1-0' usage_metadata={'input_tokens': 4322, 'output_tokens': 329, 'total_tokens': 4651, 'input_token_details': {'cache_read': 0}, 'output_token_details': {'reasoning': 0}}
+Assistant:
+('Question: Could you provide a list of all tasks associated with the "Cong" '
+ 'project?\n'
+ 'Thought: The response from the tool_call contains the tasks of project Cong. '
+ 'I will list them\n'
+ 'Action: I will organize the tasks based on their attributes and display them '
+ 'in a list.\n'
+ 'Observation:\n'
+ '```\n'
+ '[\n'
+ '    {\n'
+ '        "task id": "8c006de2-858f-4d3f-a26e-7e934a113a82",\n'
+ '        "name": "1. Create Projects 🎯",\n'
+ '        "assignees": [],\n'
+ '        "comments": [],\n'
+ '        "start date": None,\n'
+ '        "target date": None,\n'
+ '        "description": "A Project in Plane is where all your work comes '
+ 'together. Think of it as a base that organizes your work items and '
+ 'everything else your team needs to get things done.Note: This tutorial is '
+ "already set up as a Project, and these cards you're reading are work items "
+ "within it!We're showing you how to create a new project just so you'll know "
+ "exactly what to do when you're ready to start your own real one.Look over at "
+ 'the left sidebar and find where it says Projects.Hover your mouse there and '
+ "you'll see a little + icon pop up - go ahead and click it!A modal opens "
+ 'where you can give your project a name and other details.Notice the Access '
+ 'type options? Public means anyone (except Guest users) can see and join it, '
+ 'while Private keeps it just for those you invite.Tip: You can also quickly '
+ 'create a new project by using the keyboard shortcut P from anywhere in '
+ 'Plane!",\n'
+ '        "priority": "none",\n'
+ '        "state": "Backlog"\n'
+ '    },\n'
+ '    {\n'
+ '        "task id": "415f0123-0c47-4cfb-85dd-0f5149b3d284",\n'
+ '        "name": "28-6",\n'
+ '        "assignees": ["nguyen.do.cong", "tuoithodudoi.phungquan"],\n'
+ '        "comments": [],\n'
+ '        "start date": "2025-09-19",\n'
+ '        "target date": "2025-09-19",\n'
+ '        "description": None,\n'
+ '        "priority": "none",\n'
+ '        "state": "Done"\n'
+ '    },\n'
+ '    {\n'
+ '        "task id": "d773e26e-2ee8-4a3b-a4b5-65c349eee05f",\n'
+ '        "name": "test-assign",\n'
+ '        "assignees": ["tuoithodudoi.phungquan"],\n'
+ '        "comments": [],\n'
+ '        "start date": "2025-09-19",\n'
+ '        "target date": "2025-09-21",\n'
+ '        "description": None,\n'
+ '        "priority": "medium",\n'
+ '        "state": "In Progress"\n'
+ '    },\n'
+ '    {\n'
+ '        "task id": "959800e6-750a-4070-bf68-5a39bfbc9c0e",\n'
+ '        "name": "2. Invite your team 🤜🤛",\n'
+ '        "assignees": [],\n'
+ '        "comments": [],\n'
+ '        "start date": None,\n'
+ '        "target date": None,\n'
+ '        "description": "Let\'s get your teammates on board!First, you\'ll '
+ 'need to invite them to your workspace before they can join specific '
+ 'projects:Click on your workspace name in the top-left corner, then select '
+ 'Settings from the dropdown.Head over to the Members tab - this is your user '
+ "management hub. Click Add member on the top right.Enter your teammate's "
+ 'email address. Select a role for them (Admin, Member or Guest) that '
+ 'determines what they can do in the workspace.Your team member will get an '
+ "email invite. Once they've joined your workspace, you can add them to "
+ "specific projects.To do this, go to your project's Settings page.Find the "
+ 'Members section, select your teammate, and assign them a project role - this '
+ "controls what they can do within just this project.That's it!To learn more "
+ 'about user management, see Manage users and roles.",\n'
+ '        "priority": "low",\n'
+ '        "state": "Backlog"\n'
+ '    },\n'
+ '    {\n'
+ '        "task id": "d5c232d9-01df-4277-b5b8-70c8a54bfd1e",\n'
+ '        "name": "3. Create and assign Work Items ✏️",\n'
+ '        "assignees": [],\n'
+ '        "comments": [],\n'
+ '        "start date": None,\n'
+ '        "target date": None,\n'
+ '        "description": "A work item is the fundamental building block of '
+ 'your project. Think of these as the actionable tasks that move your project '
+ "forward.Ready to add something to your project's to-do list? Here's "
+ 'how:Click the Add work item button in the top-right corner of the Work Items '
+ 'page.Give your task a clear title and add any details in the description.Set '
+ 'up the essentials:Assign it to a team member (or yourself!)Choose a priority '
+ "levelAdd start and due dates if there's a timelineTip: Save time by using "
+ 'the keyboard shortcut C from anywhere in your project to quickly create a '
+ 'new work item!Want to dive deeper into all the things you can do with work '
+ 'items? Check out our documentation.",\n'
+ '        "priority": "none",\n'
+ '        "state": "Backlog"\n'
+ '    },\n'
+ '    {\n'
+ '        "task id": "30f1390e-6a3d-4763-9e72-26e253dcca52",\n'
+ '        "name": "Welcome to Plane 👋",\n'
+ '        "assignees": [],\n'
+ '        "comments": [],\n'
+ '        "start date": None,\n'
+ '        "target date": None,\n'
+ '        "description": "Hey there! This demo project is your playground to '
+ "get hands-on with Plane. We've set this up so you can click around and see "
+ 'how everything works without worrying about breaking anything.Each work item '
+ 'is designed to make you familiar with the basics of using Plane. Just follow '
+ 'along card by card at your own pace.First thing to tryLook in the Properties '
+ 'section below where it says State: Todo.Click on it and change it to Done '
+ 'from the dropdown. Alternatively, you can drag and drop the card to the Done '
+ 'column.",\n'
+ '        "priority": "none",\n'
+ '        "state": "Backlog"\n'
+ '    },\n'
+ '    {\n'
+ '        "task id": "0d995261-afc7-4044-b45e-d27734ec3ea8",\n'
+ '        "name": "bug",\n'
+ '        "assignees": ["nguyen.do.cong"],\n'
+ '        "comments": "bug fixed and assign this task to Cong",\n'
+ '        "start date": "2025-09-16",\n'
+ '        "target date": None,\n'
+ '        "description": None,\n'
+ '        "priority": "none",\n'
+ '        "state": "Done"\n'
+ '    },\n'
+ '    {\n'
+ '        "task id": "e9d5ed94-f98f-4342-875a-a8f29000e4bb",\n'
+ '        "name": "Setup Cycles",\n'
+ '        "assignees": ["tuoithodudoi.phungquan"],\n'
+ '        "comments": "let nguyen.do.cong do this task",\n'
+ '        "start date": None,\n'
+ '        "target date": None,\n'
+ '        "description": "A Cycle in Plane is like a sprint - a dedicated '
+ 'timeframe where your team focuses on completing specific work items. It '
+ 'helps you break down your project into manageable chunks with clear start '
+ 'and end dates so everyone knows what to work on and when it needs to be '
+ 'done.Setup CyclesGo to the Cycles section in your project (you can find it '
+ 'in the left sidebar)Click the Add cycle button in the top-right cornerEnter '
+ 'details and set the start and end dates for your cycle.Click Create cycle '
+ "and you're ready to go!Add existing work items to the Cycle or create new "
+ 'ones.Tip: To create a new Cycle quickly, just press Q from anywhere in your '
+ 'project!Want to learn more?Starting and stopping cyclesTransferring work '
+ 'items between cyclesTracking progress with chartsCheck out our detailed '
+ 'documentation for everything you need to know!",\n'
+ '        "priority": "none",\n'
+ '        "state": "Todo"\n'
+ '    },\n'
+ '    {\n'
+ '        "task id": "e43aa54e-7d33-4c7e-988f-f1e207fac1c5",\n'
+ '        "name": "testing",\n'
+ '        "assignees": ["nguyen.do.cong", "tuoithodudoi.phungquan"],\n'
+ '        "comments": "tôi đẫ hoàn thành and what will this return and testing '
+ 'and testing",\n'
+ '        "start date": None,\n'
+ '        "target date": None,\n'
+ '        "description": None,\n'
+ '        "priority": "low",\n'
+ '        "state": "In Progress"\n'
+ '    },\n'
+ '    {\n'
+ '        "task id": "f927f4ef-8419-47a0-bf4e-7af0787045a7",\n'
+ '        "name": "4. Visualize your work 🔮",\n'
+ '        "assignees": [],\n'
+ '        "comments": [],\n'
+ '        "start date": None,\n'
+ '        "target date": None,\n'
+ '        "description": "Plane offers multiple ways to look at your work '
+ "items depending on what you need to see. Let's explore how to change views "
+ 'and customize them!Switch between layoutsLook at the top toolbar in your '
+ "project. You'll see several layout icons.Click any of these icons to "
+ 'instantly switch between layouts.Tip: Different layouts work best for '
+ 'different needs. Try Board view for tracking progress, Calendar for deadline '
+ 'management, and Gantt for timeline planning! See Layouts for more '
+ 'info.Filter and display optionsNeed to focus on specific work?Click the '
+ 'Filters dropdown in the toolbar. Select criteria and choose which items to '
+ 'show.Click the Display dropdown to tailor how the information appears in '
+ 'your layoutCreated the perfect setup? Save it for later by clicking the the '
+ 'Save View button.Access saved views anytime from the Views section in your '
+ 'sidebar.",\n'
+ '        "priority": "none",\n'
+ '        "state": "Done"\n'
+ '    },\n'
+ '    {\n'
+ '        "task id": "1611ec7f-9591-4551-a266-39f084f9c949",\n'
+ '        "name": "6. Customize your settings ⚙️",\n'
+ '        "assignees": [],\n'
+ '        "comments": [],\n'
+ '        "start date": None,\n'
+ '        "target date": None,\n'
+ '        "description": "Now that you\'re getting familiar with Plane, let\'s '
+ 'explore how you can customize settings to make it work just right for you '
+ 'and your team!Workspace settingsRemember those workspace settings we '
+ "mentioned when inviting team members? There's a lot more you can do "
+ 'there:Invite and manage workspace membersUpgrade plans and manage '
+ 'billingImport data from other toolsExport your dataManage '
+ 'integrationsProject SettingsEach project has its own settings where you '
+ 'can:Change project details and visibilityInvite specific members to just '
+ 'this projectCustomize your workflow States (like adding a \\"Testing\\" '
+ 'state)Create and organize LabelsEnable or disable features you need (or '
+ "don't need)Your Profile SettingsYou can also customize your own personal "
+ 'experience! Click on your profile icon in the top-right corner to '
+ 'find:Profile settings (update your name, photo, etc.)Choose your timezone '
+ 'and preferred language for the interfaceEmail notification preferences (what '
+ 'you want to be alerted about)Appearance settings (light/dark mode)Taking a '
+ 'few minutes to set things up just the way you like will make your everyday '
+ 'Plane experience much smoother!Note: Some settings are only available to '
+ "workspace or project admins. If you don't see certain options, you might "
+ 'need admin access.",\n'
+ '        "priority": "none",\n'
+ '        "state": "In Progress"\n'
+ '    }\n'
+ ']\n'
+ '```')
+User: list all task of project test
+Assistant:
+'list all task of project test'
+content="Question: I need to list all tasks related to the project 'test'.\nThought: I should use the `store_search` tool to search for tasks related to the query 'project test'.\nAction:\n" additional_kwargs={'tool_calls': [{'id': 'tool_0_store_search_PAfY8yxxgfmkh3qrGdfr', 'function': {'arguments': '{"query":"project test"}', 'name': 'store_search'}, 'type': 'function', 'index': 0}], 'refusal': None} response_metadata={'token_usage': {'completion_tokens': 50, 'prompt_tokens': 424, 'total_tokens': 474, 'completion_tokens_details': {'accepted_prediction_tokens': None, 'audio_tokens': None, 'reasoning_tokens': 0, 'rejected_prediction_tokens': None, 'image_tokens': 0}, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 0}}, 'model_name': 'google/gemini-2.0-flash-001', 'system_fingerprint': None, 'id': 'gen-1761279692-FP6iKFrnQdzjOFgNXu76', 'service_tier': None, 'finish_reason': 'tool_calls', 'logprobs': None} id='run--71dd68c1-61a0-4dd7-98cd-52970aac4e8f-0' tool_calls=[{'name': 'store_search', 'args': {'query': 'project test'}, 'id': 'tool_0_store_search_PAfY8yxxgfmkh3qrGdfr', 'type': 'tool_call'}] usage_metadata={'input_tokens': 424, 'output_tokens': 50, 'total_tokens': 474, 'input_token_details': {'cache_read': 0}, 'output_token_details': {'reasoning': 0}}
+Assistant:
+('Question: list all task of project test\n'
+ 'Thought: I should use store_search to find tasks related to the query.\n'
+ 'Action:\n')
+Query: list all task of project test, Filter: <class 'filter'>
+Assistant:
+("[Document(id='70ec63f6-53bd-49d5-a388-5d1171925599', metadata={'priority': "
+ "'none', 'state': 'Todo', 'task id': '53063f9f-97ba-495c-b7ba-e5a1af6b9df8', "
+ '\'project name\': \'test\'}, page_content="This is a task that has name: a, '
+ "assignees: ,             'comments': , 'start date': None, 'target date': "
+ "None,             'description': ,             'priority': none, 'state': "
+ 'Todo."), Document(id=\'ba94783f-738c-41ea-922e-722be0da49bd\', '
+ "metadata={'state': 'Backlog', 'project name': 'test', 'priority': 'none', "
+ '\'task id\': \'38fd8aad-eeb1-49e9-aee4-ee7fc89f27b8\'}, page_content="This '
+ "is a task that has name: b, assignees: ,             'comments': , 'start "
+ "date': None, 'target date': None,             'description': ,             "
+ '\'priority\': none, \'state\': Backlog.")]')
+content='Here are the tasks for the project "test":\n\n*   **Task Name:** a, **State:** Todo, **Priority:** none\n*   **Task Name:** b, **State:** Backlog, **Priority:** none' additional_kwargs={'refusal': None} response_metadata={'token_usage': {'completion_tokens': 47, 'prompt_tokens': 1295, 'total_tokens': 1342, 'completion_tokens_details': {'accepted_prediction_tokens': None, 'audio_tokens': None, 'reasoning_tokens': 0, 'rejected_prediction_tokens': None, 'image_tokens': 0}, 'prompt_tokens_details': {'audio_tokens': None, 'cached_tokens': 0}}, 'model_name': 'google/gemini-2.0-flash-001', 'system_fingerprint': None, 'id': 'gen-1761279697-Qg5gYqj2O9RpuHklZ76F', 'service_tier': None, 'finish_reason': 'stop', 'logprobs': None} id='run--a0321c9b-57c0-4cee-a7d5-8aea7cd6506a-0' usage_metadata={'input_tokens': 1295, 'output_tokens': 47, 'total_tokens': 1342, 'input_token_details': {'cache_read': 0}, 'output_token_details': {'reasoning': 0}}
+Assistant:
+("Here are the tasks for project 'test':\n"
+ '\n'
+ 'Task name: a, state: Todo, priority: none.\n'
+ 'Task name: b, state: Backlog, priority: none.')
+User: 
