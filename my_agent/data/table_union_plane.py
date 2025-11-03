@@ -9,16 +9,20 @@ script_dir = os.path.dirname(__file__) #<-- absolute dir the script is in
 def get_short_term_memory():
     rel_path = "short_term.txt"
     abs_file_path = os.path.join(script_dir, rel_path)
-    with open(abs_file_path) as f:
+    with open(abs_file_path, 'r') as f:
         raw_data = f.read()
-        return Document(page_content=raw_data, metadata={})
+        result = raw_data.replace('{','').replace('}','')
+    return result
+        # return Document(page_content=raw_data, metadata={})
 
 def get_long_term_memory():
     rel_path = "long_term.txt"
     abs_file_path = os.path.join(script_dir, rel_path)
-    with open(abs_file_path) as f:
+    with open(abs_file_path, 'r') as f:
         raw_data = f.read()
-        return Document(page_content=raw_data, metadata={})
+        result = raw_data.replace('{','').replace('}','')
+    return result
+        # return Document(page_content=raw_data, metadata={})
 
 def get_data_from_api(url: str, table_name: str = None):
     headers = {"x-api-key": "plane_api_b343a356f3d1480ab568697a162150dd"}
